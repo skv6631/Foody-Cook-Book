@@ -9,6 +9,7 @@ import UIKit
 
 class ViewController: UIViewController {
 
+    @IBOutlet weak var noResultsFoundLabel: UILabel!
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var mealImage: UIImageView!
     lazy var searchbar = UISearchBar(frame: CGRect.zero)
@@ -19,6 +20,7 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         addSearchIcon()
         tableView.rowHeight = UITableView.automaticDimension
+        tableView.keyboardDismissMode = .onDrag
         tableView.estimatedRowHeight = 44
         tableView.sectionHeaderHeight = 44
         tableView.tableFooterView = UIView()
@@ -41,8 +43,6 @@ class ViewController: UIViewController {
         searchbar.showsCancelButton = true
         navigationItem.titleView = searchbar
         self.navigationItem.rightBarButtonItem = nil
-
-
     }
     
     func prepareData(for meal:MealObject) {
@@ -56,24 +56,82 @@ extension ViewController {
         DispatchQueue.main.async { [weak self] in
             if let _loader = self?.loader{
                 _loader.dismiss(animated: true, completion: nil)
+                self?.loader = nil
             }
 
         }
     }
-    fileprivate func showLoading() {
+    fileprivate func showLoading(text:String) {
         if let _loader = loader{
             self.present(_loader, animated: true, completion: nil)
         } else {
-            loader = UIAlertController(title: "Fetching your meal", message: nil, preferredStyle: .alert)
+            loader = UIAlertController(title: text, message: nil, preferredStyle: .alert)
             self.present(loader!, animated: true, completion: nil)
         }
     }
 }
 extension ViewController {
+    fileprivate func resetUI() {
+        self.randomMeal = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.noResultsFoundLabel.isHidden = true
+
+            self?.mealImage.image = nil
+        }
+        
+    }
+    fileprivate func getMealSearch(_ text:String){
+        let searchURL = "https://www.themealdb.com/api/json/v1/1/search.php?s=" + text
+        if let url = URL(string: searchURL){
+            showLoading(text: "Searching..")
+            resetUI();
+            let task = URLSession.shared.dataTask(with: url) {[weak self] (data, response, error) in
+                guard let data = data else { return }
+                self?.hideLoading()
+                do{
+                    if let jsonResult = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [String:Any] {
+                        if let object = (jsonResult["meals"] as? [NSDictionary])?.first{
+                            let meal = MealObject()
+                            let mirror = Mirror(reflecting: meal)
+                            for child in mirror.children{
+                                if let variable = child.label {
+                                    meal.setValue(object[variable], forKey: variable)
+                                }
+                            }
+                            self?.randomMeal = meal
+                            self?.prepareData(for: meal)
+                            if let search = self?.searchbar {
+                                self?.searchBarCancelButtonClicked(search)
+                            }
+                        } else {
+                            self?.noResultsFound()
+                        }
+                    } else {
+                        self?.noResultsFound()
+                    }
+                } catch {
+                    print("error while parsing:", error.localizedDescription)
+                }
+            }
+            task.resume()
+        }
+    }
+    func noResultsFound() {
+        reloadTable()
+        DispatchQueue.main.async { [weak self] in
+
+            self?.noResultsFoundLabel.isHidden = false
+        }
+    }
+    func reloadTable() {
+        DispatchQueue.main.async { [weak self] in
+            self?.tableView.reloadData()
+        }
+    }
     fileprivate func getRandomMeal(){
         let randomMealURL = "https://www.themealdb.com/api/json/v1/1/random.php"
         if let url = URL(string: randomMealURL){
-            showLoading()
+            showLoading(text: "Fetching your meal")
             let task = URLSession.shared.dataTask(with: url) {[weak self] (data, response, error) in
                 guard let data = data else { return }
                 self?.hideLoading()
@@ -98,7 +156,7 @@ extension ViewController {
             task.resume()
         }
     }
-
+    
     func getData(from url: URL, completion: @escaping (Data?, URLResponse?, Error?) -> ()) {
         URLSession.shared.dataTask(with: url, completionHandler: completion).resume()
     }
@@ -115,7 +173,7 @@ extension ViewController {
             }
         }
     }
-
+    
 }
 
 extension ViewController:UITableViewDelegate,UITableViewDataSource {
@@ -168,11 +226,18 @@ extension ViewController:UISearchBarDelegate{
     }
 
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-            
+        searchBar.resignFirstResponder()
+        if let text = searchBar.text,!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            getMealSearch(text)
+        }
+
     }
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
-        searchbar.text?.removeAll()
-        addSearchIcon()
+        DispatchQueue.main.async { [weak self] in
+            self?.searchbar.text?.removeAll()
+            self?.addSearchIcon()
+
+        }
     }
 
 }
