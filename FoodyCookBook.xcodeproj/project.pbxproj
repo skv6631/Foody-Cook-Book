@@ -15,7 +15,6 @@
 		A1FE0EEB26307F7800B2EA1B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A1FE0EE926307F7800B2EA1B /* LaunchScreen.storyboard */; };
 		A1FE0EF626307F7900B2EA1B /* FoodyCookBookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FE0EF526307F7900B2EA1B /* FoodyCookBookTests.swift */; };
 		A1FE0F0126307F7900B2EA1B /* FoodyCookBookUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FE0F0026307F7900B2EA1B /* FoodyCookBookUITests.swift */; };
-		A1FE0F152630883300B2EA1B /* cook.json in Resources */ = {isa = PBXBuildFile; fileRef = A1FE0F142630883300B2EA1B /* cook.json */; };
 		A1FE0F1A2630893400B2EA1B /* MealObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FE0F192630893400B2EA1B /* MealObject.swift */; };
 /* End PBXBuildFile section */
 
@@ -51,7 +50,6 @@
 		A1FE0EFC26307F7900B2EA1B /* FoodyCookBookUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FoodyCookBookUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1FE0F0026307F7900B2EA1B /* FoodyCookBookUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodyCookBookUITests.swift; sourceTree = "<group>"; };
 		A1FE0F0226307F7900B2EA1B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A1FE0F142630883300B2EA1B /* cook.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = cook.json; sourceTree = "<group>"; };
 		A1FE0F192630893400B2EA1B /* MealObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealObject.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -105,7 +103,6 @@
 			children = (
 				A1FE0EDE26307F7500B2EA1B /* AppDelegate.swift */,
 				A1FE0EE026307F7500B2EA1B /* SceneDelegate.swift */,
-				A1FE0F142630883300B2EA1B /* cook.json */,
 				A1FE0EE226307F7500B2EA1B /* ViewController.swift */,
 				A1FE0F192630893400B2EA1B /* MealObject.swift */,
 				A1FE0EE426307F7500B2EA1B /* Main.storyboard */,
@@ -238,7 +235,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1FE0EEB26307F7800B2EA1B /* LaunchScreen.storyboard in Resources */,
-				A1FE0F152630883300B2EA1B /* cook.json in Resources */,
 				A1FE0EE826307F7800B2EA1B /* Assets.xcassets in Resources */,
 				A1FE0EE626307F7500B2EA1B /* Main.storyboard in Resources */,
 			);

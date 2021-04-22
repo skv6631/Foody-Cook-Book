@@ -12,13 +12,13 @@ class ViewController: UIViewController {
     @IBOutlet weak var noResultsFoundLabel: UILabel!
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var mealImage: UIImageView!
-    lazy var searchbar = UISearchBar(frame: CGRect.zero)
+    var searchbar: UISearchBar?
 
     var loader:UIAlertController?
     var randomMeal:MealObject?
     override func viewDidLoad() {
         super.viewDidLoad()
-        addSearchIcon()
+        addBarButtons()
         tableView.rowHeight = UITableView.automaticDimension
         tableView.keyboardDismissMode = .onDrag
         tableView.estimatedRowHeight = 44
@@ -29,20 +29,71 @@ class ViewController: UIViewController {
         super.viewDidAppear(animated)
         getRandomMeal()
     }
-    func addSearchIcon() {
+    func addBarButtons() {
         let search = UIBarButtonItem(image: UIImage(systemName: "magnifyingglass"), style: .plain, target: self, action: #selector(handleSearchAction))
-        self.navigationItem.rightBarButtonItem = search
+        let fav = UIBarButtonItem(image: UIImage(systemName: "heart"), style: .plain, target: self, action: #selector(handleFavAction))
+        self.navigationItem.rightBarButtonItems = [search, fav]
         self.navigationItem.titleView = nil
         self.navigationItem.title = "Foody Cook Book"
 
     }
+    func showAsFavourite(for sender:UIBarButtonItem ,meal:MealObject){
+        let favMeals = self.fetchSavedMeals()
+        let isEmpty = favMeals.filter({$0.idMeal==meal.idMeal}).isEmpty
+        meal.isFavourite = !isEmpty
+        if meal.isFavourite {
+            sender.image = UIImage(systemName: "heart.fill")
+        } else {
+            sender.image = UIImage(systemName: "heart")
+        }
+    }
+    @objc func handleFavAction(_ sender:UIBarButtonItem) {
+        
+        guard let meal = self.randomMeal else{
+            return
+        }
+        var meals = fetchSavedMeals()
+        if meal.isFavourite{
+            meals.removeAll(where: {$0.idMeal == meal.idMeal})
+            meal.isFavourite = false
+
+        } else {
+            meal.isFavourite = true
+            meals.append(meal)
+        }
+        showAsFavourite(for: sender, meal: meal)
+        let userDefaults = UserDefaults.standard
+        do {
+            let encodedData: Data = try NSKeyedArchiver.archivedData(withRootObject: meals, requiringSecureCoding: false)
+            userDefaults.set(encodedData, forKey: "favMeals")
+            userDefaults.synchronize()
+        } catch {
+            print("error while encoding:", error.localizedDescription)
+            
+        }
+        
+    }
+    func fetchSavedMeals() -> [MealObject] {
+        let userDefaults = UserDefaults.standard
+        var meals = [MealObject]()
+        do {
+            
+            if let decoded  = userDefaults.data(forKey: "favMeals") , let unarchivedFavorites = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(decoded){
+                meals = unarchivedFavorites as? [MealObject] ?? []
+            }
+        } catch{
+            print("error while decoding:", error.localizedDescription)
+        }
+        return meals;
+    }
     @objc func handleSearchAction() {
-        searchbar.placeholder = "Search"
-        searchbar.searchTextField.returnKeyType = .search
-        searchbar.delegate = self
-        searchbar.showsCancelButton = true
+        searchbar = UISearchBar()
+        searchbar?.placeholder = "Search"
+        searchbar?.searchTextField.returnKeyType = .search
+        searchbar?.delegate = self
+//        searchbar?.showsCancelButton = true
         navigationItem.titleView = searchbar
-        self.navigationItem.rightBarButtonItem = nil
+        self.navigationItem.rightBarButtonItems = nil
     }
     
     func prepareData(for meal:MealObject) {
@@ -98,8 +149,8 @@ extension ViewController {
                         let meal = MealObject()
                         let mirror = Mirror(reflecting: meal)
                         for child in mirror.children{
-                            if let variable = child.label {
-                                meal.setValue(object[variable], forKey: variable)
+                            if let variable = child.label,let value = object[variable] {
+                                meal.setValue(value, forKey: variable)
                             }
                         }
                         self?.randomMeal = meal
@@ -151,6 +202,9 @@ extension ViewController {
             print("Download Finished")
             DispatchQueue.main.async() { [weak self] in
                 self?.mealImage.image = UIImage(data: data)
+                if let fav = self?.navigationItem.rightBarButtonItems?.last,let meal = self?.randomMeal {
+                    self?.showAsFavourite(for:fav, meal: meal)
+                }
                 self?.tableView.reloadData()
             }
         }
@@ -165,7 +219,7 @@ extension ViewController:UITableViewDelegate,UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
         if let meal = self.randomMeal {
             let mirror = Mirror(reflecting: meal)
-            return mirror.children.count-1
+            return mirror.children.count-3
         }
         return 0
     }
@@ -175,8 +229,8 @@ extension ViewController:UITableViewDelegate,UITableViewDataSource {
         cell.textLabel?.numberOfLines = 0
         if let meal = self.randomMeal {
             let mirror = Mirror(reflecting: meal).children
-            let filteredLabels = mirror.map({$0.value})[0..<mirror.count-1] ///eliminating  thumbnail
-            cell.textLabel?.text = filteredLabels[indexPath.section] as? String ?? ""
+            let filteredLabels = mirror.map({$0.value})[1..<mirror.count-2] ///eliminating  thumbnail,isfav and id
+            cell.textLabel?.text = filteredLabels[indexPath.section+1] as? String ?? ""
 
         }
         return cell
@@ -187,10 +241,10 @@ extension ViewController:UITableViewDelegate,UITableViewDataSource {
         header.textColor = .gray
         if let meal = self.randomMeal {
             let mirror = Mirror(reflecting: meal).children
-            let filteredLabels = mirror.map({$0.label})[0..<mirror.count-1] ///eliminating  thumbnail
-            let value = filteredLabels[section]
+            let filteredLabels = mirror.map({$0.label})[1..<mirror.count-2] ///eliminating  thumbnail
+            let value = filteredLabels[section+1]
             if let range = value?.range(of: "str") { //remove str in the starting
-                header.text = filteredLabels[section]?.replacingCharacters(in: range, with: "")
+                header.text = filteredLabels[section+1]?.replacingCharacters(in: range, with: "")
 
             }
 
@@ -216,8 +270,8 @@ extension ViewController:UISearchBarDelegate{
     }
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         DispatchQueue.main.async { [weak self] in
-            self?.searchbar.text?.removeAll()
-            self?.addSearchIcon()
+            self?.searchbar?.text?.removeAll()
+            self?.addBarButtons()
 
         }
     }
