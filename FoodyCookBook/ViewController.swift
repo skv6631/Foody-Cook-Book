@@ -85,36 +85,40 @@ extension ViewController {
         if let url = URL(string: searchURL){
             showLoading(text: "Searching..")
             resetUI();
-            let task = URLSession.shared.dataTask(with: url) {[weak self] (data, response, error) in
-                guard let data = data else { return }
-                self?.hideLoading()
-                do{
-                    if let jsonResult = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [String:Any] {
-                        if let object = (jsonResult["meals"] as? [NSDictionary])?.first{
-                            let meal = MealObject()
-                            let mirror = Mirror(reflecting: meal)
-                            for child in mirror.children{
-                                if let variable = child.label {
-                                    meal.setValue(object[variable], forKey: variable)
-                                }
+            makeRequest(url: url)
+        }
+    }
+    func makeRequest(url: URL) {
+        let task = URLSession.shared.dataTask(with: url) {[weak self] (data, response, error) in
+            guard let data = data else { return }
+            self?.hideLoading()
+            do{
+                if let jsonResult = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [String:Any] {
+                    if let object = (jsonResult["meals"] as? [NSDictionary])?.first{
+                        let meal = MealObject()
+                        let mirror = Mirror(reflecting: meal)
+                        for child in mirror.children{
+                            if let variable = child.label {
+                                meal.setValue(object[variable], forKey: variable)
                             }
-                            self?.randomMeal = meal
-                            self?.prepareData(for: meal)
-                            if let search = self?.searchbar {
-                                self?.searchBarCancelButtonClicked(search)
-                            }
-                        } else {
-                            self?.noResultsFound()
+                        }
+                        self?.randomMeal = meal
+                        self?.prepareData(for: meal)
+                        if let search = self?.searchbar {
+                            self?.searchBarCancelButtonClicked(search)
                         }
                     } else {
                         self?.noResultsFound()
                     }
-                } catch {
-                    print("error while parsing:", error.localizedDescription)
+                } else {
+                    self?.noResultsFound()
                 }
+            } catch {
+                print("error while parsing:", error.localizedDescription)
             }
-            task.resume()
         }
+        task.resume()
+
     }
     func noResultsFound() {
         reloadTable()
@@ -132,28 +136,7 @@ extension ViewController {
         let randomMealURL = "https://www.themealdb.com/api/json/v1/1/random.php"
         if let url = URL(string: randomMealURL){
             showLoading(text: "Fetching your meal")
-            let task = URLSession.shared.dataTask(with: url) {[weak self] (data, response, error) in
-                guard let data = data else { return }
-                self?.hideLoading()
-                do{
-                    if let jsonResult = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.allowFragments) as? [String:Any] {
-                        if let object = (jsonResult["meals"] as? [NSDictionary])?.first{
-                            let meal = MealObject()
-                            let mirror = Mirror(reflecting: meal)
-                            for child in mirror.children{
-                                if let variable = child.label {
-                                    meal.setValue(object[variable], forKey: variable)
-                                }
-                            }
-                            self?.randomMeal = meal
-                            self?.prepareData(for: meal)
-                        }
-                    }
-                } catch {
-                    print("error while parsing:", error.localizedDescription)
-                }
-            }
-            task.resume()
+            makeRequest(url: url)
         }
     }
     
@@ -166,7 +149,6 @@ extension ViewController {
             guard let data = data, error == nil else { return }
             print(response?.suggestedFilename ?? url.lastPathComponent)
             print("Download Finished")
-            // always update the UI from the main thread
             DispatchQueue.main.async() { [weak self] in
                 self?.mealImage.image = UIImage(data: data)
                 self?.tableView.reloadData()
